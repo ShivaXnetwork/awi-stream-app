@@ -15,7 +15,7 @@ jobs:
     - name: Set up Java
       uses: actions/setup-java@v4
       with:
-        distribution: 'zulu'
+        distribution: 'temurin'
         java-version: '17'
 
     - name: Set up Flutter
@@ -37,4 +37,3 @@ jobs:
       with:
         name: AwiStream-APK
         path: build/app/outputs/flutter-apk/app-release.apk
-        
