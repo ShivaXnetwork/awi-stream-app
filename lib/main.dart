@@ -36,9 +36,9 @@ class AwiToApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color(0xFF07070F), // Custom Deep Midnight Theme
+        scaffoldBackgroundColor: const Color(0xFF07070F), 
         primaryColor: const Color(0xFFF47521),
-        fontFamily: 'Roboto', // Default clean font
+        fontFamily: 'Roboto', 
       ),
       home: const MainScreen(),
     );
@@ -66,7 +66,7 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      extendBody: true, // Needed for floating nav bar
+      extendBody: true, 
       body: _pages[_selectedIndex],
       bottomNavigationBar: Container(
         margin: const EdgeInsets.only(left: 20, right: 20, bottom: 20),
@@ -104,7 +104,7 @@ class _MainScreenState extends State<MainScreen> {
 }
 
 // ==========================================
-// 🏠 HOME SCREEN (Modern UI, Not Crunchyroll)
+// 🏠 HOME SCREEN
 // ==========================================
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -138,7 +138,6 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Custom Search Bar
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: TextField(
@@ -218,7 +217,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 );
               },
             ),
-            const SizedBox(height: 100), // Padding for bottom nav
+            const SizedBox(height: 100), 
           ],
         ),
       ),
@@ -266,7 +265,7 @@ class AccountScreen extends StatelessWidget {
 }
 
 // ==========================================
-// 🎬 ANIME DETAILS SCREEN (With Custom UI & Numbers)
+// 🎬 ANIME DETAILS SCREEN
 // ==========================================
 class AnimeDetailsScreen extends StatelessWidget {
   final String animeId;
@@ -275,7 +274,6 @@ class AnimeDetailsScreen extends StatelessWidget {
 
   const AnimeDetailsScreen({super.key, required this.animeId, required this.title, required this.posterUrl});
 
-  // Hamesha show hoga ab ye premium popup!
   void _showServerSelection(BuildContext context, String epTitle, String server1, String server2) {
     showModalBottomSheet(
       context: context,
@@ -293,7 +291,6 @@ class AnimeDetailsScreen extends StatelessWidget {
               Text(epTitle, style: const TextStyle(color: Colors.white54, fontSize: 14)),
               const SizedBox(height: 20),
               
-              // Agar koi bhi link nahi mila proper, toh backup Bysekoze pass karenge hum default logic se
               ListTile(
                 leading: Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: const Color(0xFFF47521).withOpacity(0.2), borderRadius: BorderRadius.circular(8)), child: const Icon(Icons.flash_on, color: Color(0xFFF47521))),
                 title: const Text("AWI Premium (Auto)", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
@@ -392,7 +389,6 @@ class AnimeDetailsScreen extends StatelessWidget {
                     int epNum = epData['num'] ?? (index + 1);
                     String actualTitle = epData['title'] ?? 'Episode $epNum';
                     
-                    // 🔥 YAHAN FIX KIYA EPISODE NUMBER: Season 1 - Ep 1
                     String displayEpNumber = "Season 1 • Ep $epNum";
                     
                     String server1Mp4 = "";
@@ -416,12 +412,12 @@ class AnimeDetailsScreen extends StatelessWidget {
                           child: const Icon(Icons.play_arrow_rounded, color: Color(0xFFF47521), size: 30),
                         ),
                         title: Text(displayEpNumber, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFFF47521))),
+                        // 🔥 YAHAN THI WOH GALTI. Ise theek kar diya hai:
                         subtitle: Padding(
-                          padding: const EdgeInsets.top(4.0),
+                          padding: const EdgeInsets.only(top: 4.0),
                           child: Text(actualTitle, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
                         ),
                         onTap: () {
-                          // 🔥 Hamesha Premium Modal dikhayega ab!
                           _showServerSelection(context, "$displayEpNumber - $actualTitle", server1Mp4, server2Web);
                         },
                       ),
@@ -432,7 +428,7 @@ class AnimeDetailsScreen extends StatelessWidget {
               );
             },
           ),
-          const SliverToBoxAdapter(child: SizedBox(height: 100)), // Bottom spacing
+          const SliverToBoxAdapter(child: SizedBox(height: 100)), 
         ],
       ),
     );
@@ -440,7 +436,7 @@ class AnimeDetailsScreen extends StatelessWidget {
 }
 
 // ==========================================
-// 🛡️ CUSTOM DUAL VIDEO PLAYER (Fix for Bysekoze)
+// 🛡️ CUSTOM DUAL VIDEO PLAYER
 // ==========================================
 class VideoPlayerScreen extends StatefulWidget {
   final String videoUrl;
@@ -462,7 +458,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   @override
   void initState() {
     super.initState();
-    // Auto-detect MP4 vs Web
     if (!widget.videoUrl.contains("bysesukior.com") && !widget.videoUrl.contains("byse.sx") && !widget.videoUrl.contains("rareanimes")) {
       _isNativePlayer = true;
       _initNativePlayer();
@@ -492,8 +487,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
           onPageStarted: (String url) { if (mounted) setState(() => _isWebLoading = true); },
           onPageFinished: (String url) { if (mounted) setState(() => _isWebLoading = false); },
           onNavigationRequest: (NavigationRequest request) {
-            // 🔥 YAHAN FIX KIYA: Ad blocker ko relax kar diya. 
-            // Ab player ko lagega ad chal gaya hai, bas app doosri website (like PlayStore) pe redirect nahi hogi.
             if (!request.url.contains(videoHost) && !request.url.contains("google")) {
               return NavigationDecision.prevent; 
             }
