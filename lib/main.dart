@@ -5,9 +5,30 @@ import 'package:webview_flutter/webview_flutter.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // Firebase initialize karna zaroori hai
-  await Firebase.initializeApp();
-  runApp(const AwiToApp());
+  
+  // 🔥 Error pakadne ka Hacker Jaal
+  try {
+    await Firebase.initializeApp();
+    runApp(const AwiToApp());
+  } catch (e) {
+    // Agar Firebase setup fail hua, toh app atakne ke bajaye error dikhayegi!
+    runApp(MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: Scaffold(
+        backgroundColor: Colors.black,
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Text(
+              "🔥 HACKER ALERT - ERROR MIL GAYA: 🔥\n\n$e",
+              style: const TextStyle(color: Colors.red, fontSize: 16, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      ),
+    ));
+  }
 }
 
 class AwiToApp extends StatelessWidget {
@@ -18,11 +39,10 @@ class AwiToApp extends StatelessWidget {
     return MaterialApp(
       title: 'AWI.TO',
       debugShowCheckedModeBanner: false,
-      // Ekdum Premium Dark Theme
       theme: ThemeData(
         brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color(0xFF0D0D14), // Deep Dark Blue/Black
-        primaryColor: const Color(0xFFF47521), // Crunchyroll Orange
+        scaffoldBackgroundColor: const Color(0xFF0D0D14), 
+        primaryColor: const Color(0xFFF47521), 
         appBarTheme: const AppBarTheme(
           backgroundColor: Color(0xFF0D0D14),
           elevation: 0,
@@ -74,8 +94,6 @@ class HomeScreen extends StatelessWidget {
               var animeData = animes[index].data() as Map<String, dynamic>;
               String title = animeData['name'] ?? 'Unknown Anime';
               String animeId = animes[index].id;
-              
-              // Agar tumhare paas poster url hai database me, toh wo use karo
               String posterUrl = animeData['posterUrl'] ?? 'https://via.placeholder.com/300x400.png?text=Poster';
 
               return GestureDetector(
@@ -93,7 +111,6 @@ class HomeScreen extends StatelessWidget {
                     fit: StackFit.expand,
                     children: [
                       Image.network(posterUrl, fit: BoxFit.cover),
-                      // Niche ka black shadow
                       Container(
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
@@ -142,7 +159,6 @@ class AnimeDetailsScreen extends StatelessWidget {
       appBar: AppBar(title: Text(title)),
       body: Column(
         children: [
-          // Banner Image
           SizedBox(
             height: 200,
             width: double.infinity,
@@ -179,7 +195,6 @@ class AnimeDetailsScreen extends StatelessWidget {
                     var epData = episodes[index].data() as Map<String, dynamic>;
                     String epTitle = epData['title'] ?? 'Episode ${epData['num']}';
                     
-                    // Database me 'links' -> '1080p' -> 'player' check karna
                     String videoLink = "";
                     if (epData['links'] != null && epData['links']['1080p'] != null) {
                       videoLink = epData['links']['1080p']['player'] ?? "";
@@ -237,7 +252,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   void initState() {
     super.initState();
     
-    // Original website ka host nikalo (jaise bysesukior.com)
     String videoHost = Uri.parse(widget.videoUrl).host;
 
     _controller = WebViewController()
@@ -251,7 +265,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
           onPageFinished: (String url) {
             if (mounted) setState(() { _isLoading = false; });
             
-            // 💉 STEALTH INJECTOR: Website ki ad harkaton ko block karna
+            // 💉 STEALTH INJECTOR
             _controller.runJavaScript('''
               window.open = function() { return null; };
               var links = document.getElementsByTagName('a');
@@ -262,7 +276,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
             ''');
           },
           onNavigationRequest: (NavigationRequest request) {
-            // 🛑 100% STRICT NAVIGATION SHIELD
+            // 🛑 STRICT NAVIGATION SHIELD
             if (!request.url.contains(videoHost)) {
               debugPrint("Blocked Ad/Redirect: \${request.url}");
               return NavigationDecision.prevent;
@@ -278,7 +292,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      // Minimal black App bar
       appBar: AppBar(
         backgroundColor: Colors.black,
         elevation: 0,
@@ -290,7 +303,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
           children: [
             WebViewWidget(controller: _controller),
             
-            // 🔥 Premium Orange Loading Circle
             if (_isLoading)
               const Center(
                 child: CircularProgressIndicator(color: Color(0xFFF47521)),
