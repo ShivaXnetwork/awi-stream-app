@@ -5,8 +5,8 @@ import 'package:webview_flutter/webview_flutter.dart';
 import 'package:video_player/video_player.dart';
 import 'package:chewie/chewie.dart';
 import 'dart:ui';
-import 'dart:convert'; // API se data padhne ke liye
-import 'package:http/http.dart' as http; // API call karne ke liye
+import 'dart:convert'; 
+import 'package:http/http.dart' as http; 
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -47,9 +47,6 @@ class AwiToApp extends StatelessWidget {
   }
 }
 
-// ==========================================
-// 📱 AWI.TO EXCLUSIVE FLOATING NAV BAR
-// ==========================================
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
   @override
@@ -105,9 +102,6 @@ class _MainScreenState extends State<MainScreen> {
   }
 }
 
-// ==========================================
-// 🏠 HOME SCREEN
-// ==========================================
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
   @override
@@ -183,7 +177,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     String animeId = animes[index].id;
                     String posterUrl = animeData['poster'] ?? 'https://via.placeholder.com/300x400.png?text=No+Image';
                     
-                    // 🔥 NAYA FIELD: Firebase mein API ID check karega
                     String apiId = animeData['apiId'] ?? animeId; 
 
                     return GestureDetector(
@@ -230,9 +223,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-// ==========================================
-// 👤 ACCOUNT SCREEN
-// ==========================================
 class AccountScreen extends StatelessWidget {
   const AccountScreen({super.key});
 
@@ -269,12 +259,9 @@ class AccountScreen extends StatelessWidget {
   }
 }
 
-// ==========================================
-// 🎬 ANIME DETAILS SCREEN (With Auto API Fetch)
-// ==========================================
 class AnimeDetailsScreen extends StatefulWidget {
   final String animeId;
-  final String apiId; // Ye naam API pe search karne ke kaam aayega
+  final String apiId; 
   final String title;
   final String posterUrl;
 
@@ -288,23 +275,16 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
   List<dynamic> apiEpisodes = [];
   bool isApiLoading = false;
 
-  @override
-  void initState() {
-    super.initState();
-    // Tum chaho toh yahan seedha API ko call kara sakte ho!
-    // fetchEpisodesFromAPI(); 
-  }
-
-  // 🔥 THE HACKER FUNCTION: API se Auto-Episodes Nikalna
+  // 🔥 ZORO / HiAnime API FETCH FUNCTION
   Future<void> fetchEpisodesFromAPI() async {
     setState(() { isApiLoading = true; });
     try {
-      // Ye ek demo API endpoint hai Consumet ka. (solo-leveling search karega)
-      final response = await http.get(Uri.parse('https://api.consumet.org/anime/gogoanime/info/${widget.apiId}'));
+      // API call ab Gogoanime ki jagah ZORO par jayegi
+      final response = await http.get(Uri.parse('https://api.consumet.org/anime/zoro/info/${widget.apiId}'));
       if (response.statusCode == 200) {
         var data = json.decode(response.body);
         setState(() {
-          apiEpisodes = data['episodes'] ?? []; // Saare episodes yahan aa jayenge
+          apiEpisodes = data['episodes'] ?? []; 
         });
       }
     } catch (e) {
@@ -330,26 +310,27 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
               Text(epTitle, style: const TextStyle(color: Colors.white54, fontSize: 14)),
               const SizedBox(height: 20),
               
-              ListTile(
-                leading: Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: const Color(0xFFF47521).withOpacity(0.2), borderRadius: BorderRadius.circular(8)), child: const Icon(Icons.flash_on, color: Color(0xFFF47521))),
-                title: const Text("AWI Premium (API Stream)", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-                subtitle: const Text("Auto Fetched Link", style: TextStyle(color: Colors.white54, fontSize: 12)),
-                tileColor: const Color(0xFF1A1A24),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                onTap: () {
-                  Navigator.pop(context);
-                  // Jab user click karega tab API se asli .m3u8 (video file) nikal kar player ko dega
-                  String watchUrl = "https://api.consumet.org/anime/gogoanime/watch/$apiEpisodeId";
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => VideoPlayerScreen(videoUrl: watchUrl, title: epTitle)));
-                },
-              ),
+              if (apiEpisodeId.isNotEmpty)
+                ListTile(
+                  leading: Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: const Color(0xFFF47521).withOpacity(0.2), borderRadius: BorderRadius.circular(8)), child: const Icon(Icons.flash_on, color: Color(0xFFF47521))),
+                  title: const Text("HiAnime Server (Sub/Dub)", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                  subtitle: const Text("Premium Ad-Free Streaming", style: TextStyle(color: Colors.white54, fontSize: 12)),
+                  tileColor: const Color(0xFF1A1A24),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  onTap: () {
+                    Navigator.pop(context);
+                    // Watch URL ab ZORO API ko call karega
+                    String watchUrl = "https://api.consumet.org/anime/zoro/watch?episodeId=$apiEpisodeId";
+                    Navigator.push(context, MaterialPageRoute(builder: (context) => VideoPlayerScreen(videoUrl: watchUrl, title: epTitle)));
+                  },
+                ),
               const SizedBox(height: 12),
               
               if (fallbackLink.isNotEmpty)
                 ListTile(
                   leading: Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: Colors.blueAccent.withOpacity(0.2), borderRadius: BorderRadius.circular(8)), child: const Icon(Icons.web, color: Colors.blueAccent)),
                   title: const Text("Web Player (Backup)", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-                  subtitle: const Text("Firebase Uploaded Link", style: TextStyle(color: Colors.white54, fontSize: 12)),
+                  subtitle: const Text("Use if Premium fails", style: TextStyle(color: Colors.white54, fontSize: 12)),
                   tileColor: const Color(0xFF1A1A24),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   onTap: () {
@@ -399,11 +380,10 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 🔥 AUTO FETCH BUTTON (Sir dard bachane wala button)
                   ElevatedButton.icon(
                     onPressed: isApiLoading ? null : fetchEpisodesFromAPI,
                     icon: isApiLoading ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : const Icon(Icons.cloud_download),
-                    label: Text(isApiLoading ? "Fetching Magic..." : "Auto Fetch All Episodes (API)"),
+                    label: Text(isApiLoading ? "Connecting to HiAnime..." : "Fetch Episodes (HiAnime)"),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFF47521),
                       foregroundColor: Colors.white,
@@ -417,14 +397,13 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
               ),
             ),
           ),
-          // Dono tarike se episodes dikhayega (API + Firebase Backup)
           if (apiEpisodes.isNotEmpty)
             SliverList(
               delegate: SliverChildBuilderDelegate(
                 (context, index) {
                   var epData = apiEpisodes[index];
                   String epTitle = epData['title'] ?? 'Episode ${epData['number']}';
-                  String apiEpisodeId = epData['id']; // Ye API se video lane ke kaam aayega
+                  String apiEpisodeId = epData['id']; 
                   
                   return _buildEpisodeTile(context, "Season 1 • Ep ${epData['number']}", epTitle, apiEpisodeId, "");
                 },
@@ -437,7 +416,7 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) return const SliverToBoxAdapter(child: Center(child: CircularProgressIndicator(color: Color(0xFFF47521))));
                 var rawEpisodes = snapshot.data?.docs ?? [];
-                if (rawEpisodes.isEmpty) return const SliverToBoxAdapter(child: Center(child: Text("Episodes coming soon... Ya fir 'Auto Fetch' dabao!", style: TextStyle(color: Colors.white54))));
+                if (rawEpisodes.isEmpty) return const SliverToBoxAdapter(child: Center(child: Text("Click Fetch button to get from HiAnime!", style: TextStyle(color: Colors.white54))));
 
                 rawEpisodes.sort((a, b) => ((a.data() as Map<String, dynamic>)['num'] ?? 0).compareTo((b.data() as Map<String, dynamic>)['num'] ?? 0));
 
@@ -490,9 +469,6 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
   }
 }
 
-// ==========================================
-// 🛡️ CUSTOM DUAL VIDEO PLAYER
-// ==========================================
 class VideoPlayerScreen extends StatefulWidget {
   final String videoUrl;
   final String title;
@@ -518,16 +494,15 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   }
 
   Future<void> _setupPlayer() async {
-    // Agar link API wala hai (jo JSON return karta hai video nahi), toh pehle link resolve karo
-    if (widget.videoUrl.contains("api.consumet.org/anime/gogoanime/watch")) {
+    // 🔥 Zoro API link check karega
+    if (widget.videoUrl.contains("api.consumet.org/anime/zoro/watch")) {
       setState(() { _isNativePlayer = true; });
       try {
         final response = await http.get(Uri.parse(widget.videoUrl));
         var data = json.decode(response.body);
-        // Default 1080p ya best quality nikalna
         var sources = data['sources'] as List<dynamic>;
         if (sources.isNotEmpty) {
-          _finalApiVideoLink = sources.last['url']; // aakhri link sabse high quality hota hai (usually m3u8)
+          _finalApiVideoLink = sources.last['url']; 
           _initNativePlayer(_finalApiVideoLink);
         }
       } catch (e) {
