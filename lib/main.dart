@@ -6,12 +6,18 @@ import 'package:webview_flutter/webview_flutter.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // 🔥 Error pakadne ka Hacker Jaal
   try {
-    await Firebase.initializeApp();
+    // 🔥 STEALTH FIREBASE INITIALIZATION (Bina JSON file ke)
+    await Firebase.initializeApp(
+      options: const FirebaseOptions(
+        apiKey: "AIzaSyDfNgqR9UtKUvd2Prf2YPBFu33DJ_ubytk", 
+        appId: "1:747833174910:web:eefcbf01901ecb58b8a12f", // Tumhari App ID aa gayi!
+        messagingSenderId: "747833174910", // Tumhara Sender ID aa gaya!
+        projectId: "anime-website-42907", 
+      ),
+    );
     runApp(const AwiToApp());
   } catch (e) {
-    // Agar Firebase setup fail hua, toh app atakne ke bajaye error dikhayegi!
     runApp(MaterialApp(
       debugShowCheckedModeBanner: false,
       home: Scaffold(
