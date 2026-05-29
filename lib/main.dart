@@ -412,7 +412,6 @@ class AnimeDetailsScreen extends StatelessWidget {
                           child: const Icon(Icons.play_arrow_rounded, color: Color(0xFFF47521), size: 30),
                         ),
                         title: Text(displayEpNumber, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFFF47521))),
-                        // 🔥 YAHAN THI WOH GALTI. Ise theek kar diya hai:
                         subtitle: Padding(
                           padding: const EdgeInsets.only(top: 4.0),
                           child: Text(actualTitle, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
@@ -436,7 +435,7 @@ class AnimeDetailsScreen extends StatelessWidget {
 }
 
 // ==========================================
-// 🛡️ CUSTOM DUAL VIDEO PLAYER
+// 🛡️ CUSTOM DUAL VIDEO PLAYER (Fix for Back Button Trap)
 // ==========================================
 class VideoPlayerScreen extends StatefulWidget {
   final String videoUrl;
@@ -513,17 +512,34 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
         title: Text(widget.title, style: const TextStyle(fontSize: 14, color: Colors.white54)),
       ),
       body: SafeArea(
-        child: Center(
-          child: _isNativePlayer
-              ? (_chewieController != null && _chewieController!.videoPlayerController.value.isInitialized
-                  ? Chewie(controller: _chewieController!)
-                  : const CircularProgressIndicator(color: Color(0xFFF47521)))
-              : Stack(
-                  children: [
-                    WebViewWidget(controller: _webController),
-                    if (_isWebLoading) const Center(child: CircularProgressIndicator(color: Color(0xFFF47521))),
-                  ],
-                ),
+        // 🔥 HACKER SHIELD: Ye logic phone ke back button ko capture karega
+        child: PopScope(
+          canPop: false, // Default back ko rok do
+          onPopInvoked: (didPop) async {
+            if (didPop) return;
+            
+            // Agar web player hai aur koi ad tab khula hai, toh usko close karo
+            if (!_isNativePlayer && await _webController.canGoBack()) {
+              _webController.goBack();
+            } else {
+              // Warna properly app se peechhe jao
+              if (context.mounted) {
+                Navigator.of(context).pop();
+              }
+            }
+          },
+          child: Center(
+            child: _isNativePlayer
+                ? (_chewieController != null && _chewieController!.videoPlayerController.value.isInitialized
+                    ? Chewie(controller: _chewieController!)
+                    : const CircularProgressIndicator(color: Color(0xFFF47521)))
+                : Stack(
+                    children: [
+                      WebViewWidget(controller: _webController),
+                      if (_isWebLoading) const Center(child: CircularProgressIndicator(color: Color(0xFFF47521))),
+                    ],
+                  ),
+          ),
         ),
       ),
     );
