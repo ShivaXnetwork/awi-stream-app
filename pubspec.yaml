@@ -9,8 +9,9 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.2
-  http: ^1.1.0             # Internet se Firebase data laane ke liye
-  cached_network_image: ^3.3.0 # HD Posters ko fast load karne ke liye
+  http: ^1.1.0
+  cached_network_image: ^3.3.0
+  webview_flutter: ^4.4.2   # 🎬 Naya In-App Video Player Engine
 
 dev_dependencies:
   flutter_test:
@@ -19,4 +20,3 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  
