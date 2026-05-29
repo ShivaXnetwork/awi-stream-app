@@ -205,6 +205,70 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
     }
   }
 
+  // 🚀 SERVER SELECTION BOTTOM SHEET MENU
+  void _showServerOptions(BuildContext context, String playerUrl, String epTitle, String animeName) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF151515), // Premium Dark Grey
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 25),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text("Choose Server - E$epTitle", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+              const SizedBox(height: 20),
+              
+              // 🔴 Option 1: Stream (Active)
+              ListTile(
+                leading: const Icon(Icons.play_circle_fill, color: Color(0xFFF47521), size: 35),
+                title: const Text("Server 1 (Fast Stream)", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                subtitle: const Text("Best for normal internet", style: TextStyle(color: Colors.grey, fontSize: 12)),
+                tileColor: Colors.black,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                onTap: () {
+                  Navigator.pop(context); // Menu band karo
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => VideoPlayerScreen(videoUrl: playerUrl, title: "E$epTitle - $animeName")));
+                },
+              ),
+              const SizedBox(height: 12),
+
+              // 🔵 Option 2: Server 2 (Future)
+              ListTile(
+                leading: const Icon(Icons.hd, color: Colors.blueAccent, size: 35),
+                title: const Text("Server 2 (VIP HD)", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                subtitle: const Text("Requires 1-Day Pass (Coming Soon)", style: TextStyle(color: Colors.grey, fontSize: 12)),
+                tileColor: Colors.black,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                onTap: () {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Server 2 is locked! VIP system coming soon.")));
+                },
+              ),
+              const SizedBox(height: 12),
+              
+              // ⬇️ Option 3: Download
+              ListTile(
+                leading: const Icon(Icons.download, color: Colors.greenAccent, size: 35),
+                title: const Text("Download Episode", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                subtitle: const Text("Save to gallery (Coming Soon)", style: TextStyle(color: Colors.grey, fontSize: 12)),
+                tileColor: Colors.black,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                onTap: () {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Download feature will be added in the next update!")));
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     var fields = widget.animeData['fields'];
@@ -276,7 +340,8 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
                                     subtitle: const Text("HD | Sub", style: TextStyle(color: Colors.grey, fontSize: 12)),
                                     onTap: () {
                                       if (playerUrl.isNotEmpty) {
-                                        Navigator.push(context, MaterialPageRoute(builder: (context) => VideoPlayerScreen(videoUrl: playerUrl, title: "E$epNum - $name")));
+                                        // 🚀 Yahan hum seedha play nahi kar rahe, balki Menu khol rahe hain
+                                        _showServerOptions(context, playerUrl, epNum, name);
                                       } else {
                                         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Is episode ka video link nahi mila!")));
                                       }
@@ -311,8 +376,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   @override
   void initState() {
     super.initState();
-    
-    // Original website ka host nikalo (jaise bysekoze.com)
     String videoHost = Uri.parse(widget.videoUrl).host;
 
     _controller = WebViewController()
@@ -321,12 +384,8 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
       ..setNavigationDelegate(
         NavigationDelegate(
           onPageFinished: (String url) {
-            // 💉 JAVASCRIPT INJECTOR (Kill Pop-ups)
             _controller.runJavaScript('''
-              // 1. Naye tab kholne wale function ko dead kar do
               window.open = function() { return null; };
-              
-              // 2. Click karne par jo redirect wale hidden links hote hain, unko hata do
               var links = document.getElementsByTagName('a');
               for(var i=0; i<links.length; i++) {
                 if(links[i].target === '_blank') {
@@ -337,9 +396,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
             ''');
           },
           onNavigationRequest: (NavigationRequest request) {
-            // 🛑 NAVIGATION SHIELD (Block redirects to Ads)
             if (!request.url.contains(videoHost) && !request.url.contains('google')) {
-              // Agar koi naya URL khul raha hai jo original host nahi hai, toh use block kar do
               return NavigationDecision.prevent;
             }
             return NavigationDecision.navigate;
