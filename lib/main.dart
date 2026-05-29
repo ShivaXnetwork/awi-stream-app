@@ -5,6 +5,8 @@ import 'package:webview_flutter/webview_flutter.dart';
 import 'package:video_player/video_player.dart';
 import 'package:chewie/chewie.dart';
 import 'dart:ui';
+import 'dart:convert'; // API se data padhne ke liye
+import 'package:http/http.dart' as http; // API call karne ke liye
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -180,9 +182,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     String title = animeData['name'] ?? 'Unknown Anime';
                     String animeId = animes[index].id;
                     String posterUrl = animeData['poster'] ?? 'https://via.placeholder.com/300x400.png?text=No+Image';
+                    
+                    // 🔥 NAYA FIELD: Firebase mein API ID check karega
+                    String apiId = animeData['apiId'] ?? animeId; 
 
                     return GestureDetector(
-                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => AnimeDetailsScreen(animeId: animeId, title: title, posterUrl: posterUrl))),
+                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => AnimeDetailsScreen(animeId: animeId, apiId: apiId, title: title, posterUrl: posterUrl))),
                       child: Container(
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(16),
@@ -265,16 +270,50 @@ class AccountScreen extends StatelessWidget {
 }
 
 // ==========================================
-// 🎬 ANIME DETAILS SCREEN
+// 🎬 ANIME DETAILS SCREEN (With Auto API Fetch)
 // ==========================================
-class AnimeDetailsScreen extends StatelessWidget {
+class AnimeDetailsScreen extends StatefulWidget {
   final String animeId;
+  final String apiId; // Ye naam API pe search karne ke kaam aayega
   final String title;
   final String posterUrl;
 
-  const AnimeDetailsScreen({super.key, required this.animeId, required this.title, required this.posterUrl});
+  const AnimeDetailsScreen({super.key, required this.animeId, required this.apiId, required this.title, required this.posterUrl});
 
-  void _showServerSelection(BuildContext context, String epTitle, String server1, String server2) {
+  @override
+  State<AnimeDetailsScreen> createState() => _AnimeDetailsScreenState();
+}
+
+class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
+  List<dynamic> apiEpisodes = [];
+  bool isApiLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Tum chaho toh yahan seedha API ko call kara sakte ho!
+    // fetchEpisodesFromAPI(); 
+  }
+
+  // 🔥 THE HACKER FUNCTION: API se Auto-Episodes Nikalna
+  Future<void> fetchEpisodesFromAPI() async {
+    setState(() { isApiLoading = true; });
+    try {
+      // Ye ek demo API endpoint hai Consumet ka. (solo-leveling search karega)
+      final response = await http.get(Uri.parse('https://api.consumet.org/anime/gogoanime/info/${widget.apiId}'));
+      if (response.statusCode == 200) {
+        var data = json.decode(response.body);
+        setState(() {
+          apiEpisodes = data['episodes'] ?? []; // Saare episodes yahan aa jayenge
+        });
+      }
+    } catch (e) {
+      print("API Fetch Error: $e");
+    }
+    setState(() { isApiLoading = false; });
+  }
+
+  void _showServerSelection(BuildContext context, String epTitle, String apiEpisodeId, String fallbackLink) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -293,28 +332,29 @@ class AnimeDetailsScreen extends StatelessWidget {
               
               ListTile(
                 leading: Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: const Color(0xFFF47521).withOpacity(0.2), borderRadius: BorderRadius.circular(8)), child: const Icon(Icons.flash_on, color: Color(0xFFF47521))),
-                title: const Text("AWI Premium (Auto)", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-                subtitle: const Text("Fastest / MP4", style: TextStyle(color: Colors.white54, fontSize: 12)),
+                title: const Text("AWI Premium (API Stream)", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                subtitle: const Text("Auto Fetched Link", style: TextStyle(color: Colors.white54, fontSize: 12)),
                 tileColor: const Color(0xFF1A1A24),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 onTap: () {
                   Navigator.pop(context);
-                  String finalLink = server1.isNotEmpty ? server1 : (server2.isNotEmpty ? server2 : "");
-                  if(finalLink.isNotEmpty) Navigator.push(context, MaterialPageRoute(builder: (context) => VideoPlayerScreen(videoUrl: finalLink, title: epTitle)));
+                  // Jab user click karega tab API se asli .m3u8 (video file) nikal kar player ko dega
+                  String watchUrl = "https://api.consumet.org/anime/gogoanime/watch/$apiEpisodeId";
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => VideoPlayerScreen(videoUrl: watchUrl, title: epTitle)));
                 },
               ),
               const SizedBox(height: 12),
               
-              if (server2.isNotEmpty)
+              if (fallbackLink.isNotEmpty)
                 ListTile(
                   leading: Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: Colors.blueAccent.withOpacity(0.2), borderRadius: BorderRadius.circular(8)), child: const Icon(Icons.web, color: Colors.blueAccent)),
                   title: const Text("Web Player (Backup)", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-                  subtitle: const Text("Use if Premium fails", style: TextStyle(color: Colors.white54, fontSize: 12)),
+                  subtitle: const Text("Firebase Uploaded Link", style: TextStyle(color: Colors.white54, fontSize: 12)),
                   tileColor: const Color(0xFF1A1A24),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   onTap: () {
                     Navigator.pop(context);
-                    Navigator.push(context, MaterialPageRoute(builder: (context) => VideoPlayerScreen(videoUrl: server2, title: epTitle)));
+                    Navigator.push(context, MaterialPageRoute(builder: (context) => VideoPlayerScreen(videoUrl: fallbackLink, title: epTitle)));
                   },
                 ),
             ],
@@ -335,11 +375,11 @@ class AnimeDetailsScreen extends StatelessWidget {
             pinned: true,
             backgroundColor: const Color(0xFF07070F),
             flexibleSpace: FlexibleSpaceBar(
-              title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              title: Text(widget.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
               background: Stack(
                 fit: StackFit.expand,
                 children: [
-                  Image.network(posterUrl, fit: BoxFit.cover, alignment: Alignment.topCenter),
+                  Image.network(widget.posterUrl, fit: BoxFit.cover, alignment: Alignment.topCenter),
                   Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
@@ -359,12 +399,16 @@ class AnimeDetailsScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4), decoration: BoxDecoration(color: const Color(0xFFF47521), borderRadius: BorderRadius.circular(5)), child: const Text("HD", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                      const SizedBox(width: 10),
-                      const Text("Sub | Dub", style: TextStyle(color: Colors.white54, fontWeight: FontWeight.bold)),
-                    ],
+                  // 🔥 AUTO FETCH BUTTON (Sir dard bachane wala button)
+                  ElevatedButton.icon(
+                    onPressed: isApiLoading ? null : fetchEpisodesFromAPI,
+                    icon: isApiLoading ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : const Icon(Icons.cloud_download),
+                    label: Text(isApiLoading ? "Fetching Magic..." : "Auto Fetch All Episodes (API)"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFF47521),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
                   ),
                   const SizedBox(height: 20),
                   const Text("Episodes", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
@@ -373,69 +417,81 @@ class AnimeDetailsScreen extends StatelessWidget {
               ),
             ),
           ),
-          StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance.collection('episodes').where('animeId', isEqualTo: animeId).snapshots(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) return const SliverToBoxAdapter(child: Center(child: CircularProgressIndicator(color: Color(0xFFF47521))));
-              var rawEpisodes = snapshot.data?.docs ?? [];
-              if (rawEpisodes.isEmpty) return const SliverToBoxAdapter(child: Center(child: Text("Episodes coming soon...", style: TextStyle(color: Colors.white54))));
+          // Dono tarike se episodes dikhayega (API + Firebase Backup)
+          if (apiEpisodes.isNotEmpty)
+            SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) {
+                  var epData = apiEpisodes[index];
+                  String epTitle = epData['title'] ?? 'Episode ${epData['number']}';
+                  String apiEpisodeId = epData['id']; // Ye API se video lane ke kaam aayega
+                  
+                  return _buildEpisodeTile(context, "Season 1 • Ep ${epData['number']}", epTitle, apiEpisodeId, "");
+                },
+                childCount: apiEpisodes.length,
+              ),
+            )
+          else
+            StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance.collection('episodes').where('animeId', isEqualTo: widget.animeId).snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) return const SliverToBoxAdapter(child: Center(child: CircularProgressIndicator(color: Color(0xFFF47521))));
+                var rawEpisodes = snapshot.data?.docs ?? [];
+                if (rawEpisodes.isEmpty) return const SliverToBoxAdapter(child: Center(child: Text("Episodes coming soon... Ya fir 'Auto Fetch' dabao!", style: TextStyle(color: Colors.white54))));
 
-              rawEpisodes.sort((a, b) => ((a.data() as Map<String, dynamic>)['num'] ?? 0).compareTo((b.data() as Map<String, dynamic>)['num'] ?? 0));
+                rawEpisodes.sort((a, b) => ((a.data() as Map<String, dynamic>)['num'] ?? 0).compareTo((b.data() as Map<String, dynamic>)['num'] ?? 0));
 
-              return SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    var epData = rawEpisodes[index].data() as Map<String, dynamic>;
-                    int epNum = epData['num'] ?? (index + 1);
-                    String actualTitle = epData['title'] ?? 'Episode $epNum';
-                    
-                    String displayEpNumber = "Season 1 • Ep $epNum";
-                    
-                    String server1Mp4 = "";
-                    String server2Web = "";
+                return SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      var epData = rawEpisodes[index].data() as Map<String, dynamic>;
+                      int epNum = epData['num'] ?? (index + 1);
+                      String actualTitle = epData['title'] ?? 'Episode $epNum';
+                      
+                      String server2Web = "";
+                      if (epData['links'] != null && epData['links']['1080p'] != null) {
+                        server2Web = epData['links']['1080p']['player'] ?? "";
+                      }
 
-                    if (epData['links'] != null && epData['links']['1080p'] != null) {
-                      var links = epData['links']['1080p'];
-                      if (links['player'] != null) server2Web = links['player'];
-                      if (links['server1'] != null) server1Mp4 = links['server1'];
-                      if (links['server2'] != null) server2Web = links['server2'];
-                    }
-
-                    return Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                      decoration: BoxDecoration(color: const Color(0xFF13131F), borderRadius: BorderRadius.circular(15)),
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        leading: Container(
-                          width: 50, height: 50,
-                          decoration: BoxDecoration(color: const Color(0xFFF47521).withOpacity(0.1), shape: BoxShape.circle),
-                          child: const Icon(Icons.play_arrow_rounded, color: Color(0xFFF47521), size: 30),
-                        ),
-                        title: Text(displayEpNumber, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFFF47521))),
-                        subtitle: Padding(
-                          padding: const EdgeInsets.only(top: 4.0),
-                          child: Text(actualTitle, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
-                        ),
-                        onTap: () {
-                          _showServerSelection(context, "$displayEpNumber - $actualTitle", server1Mp4, server2Web);
-                        },
-                      ),
-                    );
-                  },
-                  childCount: rawEpisodes.length,
-                ),
-              );
-            },
-          ),
+                      return _buildEpisodeTile(context, "Season 1 • Ep $epNum", actualTitle, "", server2Web);
+                    },
+                    childCount: rawEpisodes.length,
+                  ),
+                );
+              },
+            ),
           const SliverToBoxAdapter(child: SizedBox(height: 100)), 
         ],
+      ),
+    );
+  }
+
+  Widget _buildEpisodeTile(BuildContext context, String displayEpNumber, String actualTitle, String apiEpisodeId, String fallbackLink) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      decoration: BoxDecoration(color: const Color(0xFF13131F), borderRadius: BorderRadius.circular(15)),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        leading: Container(
+          width: 50, height: 50,
+          decoration: BoxDecoration(color: const Color(0xFFF47521).withOpacity(0.1), shape: BoxShape.circle),
+          child: const Icon(Icons.play_arrow_rounded, color: Color(0xFFF47521), size: 30),
+        ),
+        title: Text(displayEpNumber, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFFF47521))),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 4.0),
+          child: Text(actualTitle, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
+        ),
+        onTap: () {
+          _showServerSelection(context, "$displayEpNumber - $actualTitle", apiEpisodeId, fallbackLink);
+        },
       ),
     );
   }
 }
 
 // ==========================================
-// 🛡️ CUSTOM DUAL VIDEO PLAYER (Fix for Back Button Trap)
+// 🛡️ CUSTOM DUAL VIDEO PLAYER
 // ==========================================
 class VideoPlayerScreen extends StatefulWidget {
   final String videoUrl;
@@ -453,20 +509,41 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   VideoPlayerController? _videoPlayerController;
   ChewieController? _chewieController;
   bool _isNativePlayer = false;
+  String _finalApiVideoLink = "";
 
   @override
   void initState() {
     super.initState();
-    if (!widget.videoUrl.contains("bysesukior.com") && !widget.videoUrl.contains("byse.sx") && !widget.videoUrl.contains("rareanimes")) {
-      _isNativePlayer = true;
-      _initNativePlayer();
+    _setupPlayer();
+  }
+
+  Future<void> _setupPlayer() async {
+    // Agar link API wala hai (jo JSON return karta hai video nahi), toh pehle link resolve karo
+    if (widget.videoUrl.contains("api.consumet.org/anime/gogoanime/watch")) {
+      setState(() { _isNativePlayer = true; });
+      try {
+        final response = await http.get(Uri.parse(widget.videoUrl));
+        var data = json.decode(response.body);
+        // Default 1080p ya best quality nikalna
+        var sources = data['sources'] as List<dynamic>;
+        if (sources.isNotEmpty) {
+          _finalApiVideoLink = sources.last['url']; // aakhri link sabse high quality hota hai (usually m3u8)
+          _initNativePlayer(_finalApiVideoLink);
+        }
+      } catch (e) {
+        print("Video URL Fetch failed");
+      }
+    } 
+    else if (!widget.videoUrl.contains("bysesukior.com") && !widget.videoUrl.contains("byse.sx") && !widget.videoUrl.contains("rareanimes")) {
+      setState(() { _isNativePlayer = true; });
+      _initNativePlayer(widget.videoUrl);
     } else {
       _initWebViewPlayer();
     }
   }
 
-  void _initNativePlayer() async {
-    _videoPlayerController = VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl));
+  void _initNativePlayer(String url) async {
+    _videoPlayerController = VideoPlayerController.networkUrl(Uri.parse(url));
     await _videoPlayerController!.initialize();
     _chewieController = ChewieController(
       videoPlayerController: _videoPlayerController!,
@@ -512,20 +589,14 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
         title: Text(widget.title, style: const TextStyle(fontSize: 14, color: Colors.white54)),
       ),
       body: SafeArea(
-        // 🔥 HACKER SHIELD: Ye logic phone ke back button ko capture karega
         child: PopScope(
-          canPop: false, // Default back ko rok do
+          canPop: false,
           onPopInvoked: (didPop) async {
             if (didPop) return;
-            
-            // Agar web player hai aur koi ad tab khula hai, toh usko close karo
             if (!_isNativePlayer && await _webController.canGoBack()) {
               _webController.goBack();
             } else {
-              // Warna properly app se peechhe jao
-              if (context.mounted) {
-                Navigator.of(context).pop();
-              }
+              if (context.mounted) Navigator.of(context).pop();
             }
           },
           child: Center(
