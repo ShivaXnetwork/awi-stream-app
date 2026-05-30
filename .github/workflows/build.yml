@@ -20,7 +20,7 @@ jobs:
         channel: 'stable'
 
     - name: Generate Missing Android Folder (V2 Embedding)
-      run: flutter create --platforms android .
+      run: flutter create --project-name awi_stream_app --platforms android .
 
     - name: Install dependencies
       run: flutter pub get
