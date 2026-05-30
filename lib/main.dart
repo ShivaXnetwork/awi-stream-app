@@ -5,8 +5,6 @@ import 'package:video_player/video_player.dart';
 import 'package:chewie/chewie.dart';
 import 'dart:ui';
 import 'package:flutter/services.dart';
-import 'package:perfect_volume_control/perfect_volume_control.dart';
-import 'package:screen_brightness/screen_brightness.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -412,8 +410,8 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   VideoPlayerController? _videoPlayerController;
   ChewieController? _chewieController;
 
-  double _currentVolume = 0.5;
-  double _currentBrightness = 0.5;
+  // Aspect Ratio Variable Default Fit Set Hai
+  BoxFit _videoFit = BoxFit.contain;
 
   @override
   void initState() {
@@ -421,10 +419,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     
     SystemChrome.setPreferredOrientations([DeviceOrientation.landscapeRight, DeviceOrientation.landscapeLeft]);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-
-    PerfectVolumeControl.getVolume().then((vol) => _currentVolume = vol);
-    ScreenBrightness().current.then((b) => _currentBrightness = b);
-    PerfectVolumeControl.hideUI = true; 
 
     _initNativePlayer();
   }
@@ -436,6 +430,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     _chewieController = ChewieController(
       videoPlayerController: _videoPlayerController!,
       autoPlay: true, 
+      allowFullScreen: false, // Apne custom button ke liye default ko band kiya hai
       aspectRatio: _videoPlayerController!.value.aspectRatio,
       allowedScreenSleep: false, 
       showControlsOnInitialize: false,
@@ -468,21 +463,60 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
         bottom: false,
         child: Center(
           child: (_chewieController != null && _chewieController!.videoPlayerController.value.isInitialized)
-              ? GestureDetector(
-                  behavior: HitTestBehavior.translucent,
-                  onVerticalDragUpdate: (details) async {
-                    double screenWidth = MediaQuery.of(context).size.width;
-                    double delta = -details.delta.dy / 200; 
-
-                    if (details.globalPosition.dx < screenWidth / 2) {
-                      _currentBrightness = (_currentBrightness + delta).clamp(0.0, 1.0);
-                      await ScreenBrightness().setScreenBrightness(_currentBrightness);
-                    } else {
-                      _currentVolume = (_currentVolume + delta).clamp(0.0, 1.0);
-                      PerfectVolumeControl.setVolume(_currentVolume);
-                    }
-                  },
-                  child: Chewie(controller: _chewieController!),
+              ? Stack(
+                  children: [
+                    // Main Video Player With Aspect Ratio Function
+                    Positioned.fill(
+                      child: FittedBox(
+                        fit: _videoFit,
+                        child: SizedBox(
+                          width: _videoPlayerController!.value.size.width,
+                          height: _videoPlayerController!.value.size.height,
+                          child: Chewie(controller: _chewieController!),
+                        ),
+                      ),
+                    ),
+                    
+                    // Zoom/Fit Toggle Button (Top Right Corner)
+                    Positioned(
+                      top: 30,
+                      right: 20,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.black54,
+                          shape: BoxShape.circle,
+                        ),
+                        child: IconButton(
+                          icon: Icon(
+                            _videoFit == BoxFit.contain ? Icons.crop_free : Icons.fullscreen_exit,
+                            color: Colors.white,
+                            size: 28,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _videoFit = _videoFit == BoxFit.contain ? BoxFit.cover : BoxFit.contain;
+                            });
+                          },
+                        ),
+                      ),
+                    ),
+                    
+                    // Custom Back Button
+                    Positioned(
+                      top: 30,
+                      left: 20,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.black54,
+                          shape: BoxShape.circle,
+                        ),
+                        child: IconButton(
+                          icon: const Icon(Icons.arrow_back, color: Colors.white, size: 28),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                      ),
+                    ),
+                  ],
                 )
               : Column(
                   mainAxisAlignment: MainAxisAlignment.center,
