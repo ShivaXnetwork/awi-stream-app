@@ -399,7 +399,6 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
   }
 }
 
-// 🔥 THE ULTIMATE PREMIUM VIDEO PLAYER (MX PLAYER STYLE)
 class VideoPlayerScreen extends StatefulWidget {
   final String videoUrl;
   final String title;
@@ -420,14 +419,12 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   void initState() {
     super.initState();
     
-    // Auto Landscape & Immersive Mode
     SystemChrome.setPreferredOrientations([DeviceOrientation.landscapeRight, DeviceOrientation.landscapeLeft]);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
 
-    // Initial Volume and Brightness fetch karna
     PerfectVolumeControl.getVolume().then((vol) => _currentVolume = vol);
     ScreenBrightness().current.then((b) => _currentBrightness = b);
-    PerfectVolumeControl.hideUI = true; // System volume slider hide karne ke liye
+    PerfectVolumeControl.hideUI = true; 
 
     _initNativePlayer();
   }
@@ -440,7 +437,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
       videoPlayerController: _videoPlayerController!,
       autoPlay: true, 
       aspectRatio: _videoPlayerController!.value.aspectRatio,
-      allowedScreenSleep: false, // Screen hamesha ON rahegi
+      allowedScreenSleep: false, 
       showControlsOnInitialize: false,
       materialProgressColors: ChewieProgressColors(
         playedColor: const Color(0xFFF47521), 
@@ -454,7 +451,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
 
   @override
   void dispose() {
-    // Back aane par wapas Portrait mode aur UI wapas
     SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
 
@@ -472,19 +468,16 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
         bottom: false,
         child: Center(
           child: (_chewieController != null && _chewieController!.videoPlayerController.value.isInitialized)
-              // 🔥 Swipe Gestures (HitTestBehavior se Chewie ke play/pause conflict nahi honge)
               ? GestureDetector(
                   behavior: HitTestBehavior.translucent,
                   onVerticalDragUpdate: (details) async {
                     double screenWidth = MediaQuery.of(context).size.width;
-                    double delta = -details.delta.dy / 200; // Swipe sensitivity
+                    double delta = -details.delta.dy / 200; 
 
                     if (details.globalPosition.dx < screenWidth / 2) {
-                      // Left Side Swipe = Brightness Control
                       _currentBrightness = (_currentBrightness + delta).clamp(0.0, 1.0);
                       await ScreenBrightness().setScreenBrightness(_currentBrightness);
                     } else {
-                      // Right Side Swipe = Volume Control
                       _currentVolume = (_currentVolume + delta).clamp(0.0, 1.0);
                       PerfectVolumeControl.setVolume(_currentVolume);
                     }
