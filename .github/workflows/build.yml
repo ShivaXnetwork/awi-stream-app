@@ -19,6 +19,11 @@ jobs:
         flutter-version: '3.19.6'
         channel: 'stable'
 
+    - name: Force Specific Package Versions
+      run: |
+        sed -i 's/screen_brightness: any/screen_brightness: ^0.2.2/g' pubspec.yaml
+        sed -i 's/perfect_volume_control: any/perfect_volume_control: ^0.2.8/g' pubspec.yaml
+
     - name: Generate Missing Android Folder (V2 Embedding)
       run: flutter create --project-name awi_stream_app --platforms android .
 
