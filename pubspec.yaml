@@ -16,7 +16,6 @@ dependencies:
   cloud_firestore: ^4.14.0
   video_player: ^2.8.2
   chewie: ^1.7.5
-  # 🔥 Naye Premium Player Packages
   perfect_volume_control: ^0.3.0
   screen_brightness: ^1.0.0
 
