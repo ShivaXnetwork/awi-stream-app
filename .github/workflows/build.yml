@@ -2,7 +2,7 @@ name: Build AWI Premium APK
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "master" ]
   workflow_dispatch:
 
 jobs:
@@ -22,13 +22,16 @@ jobs:
       run: flutter pub get
 
     - name: Generate Missing Android Folder
-      run: flutter create .
+      run: flutter create --platforms android .
 
     - name: Upgrade Android SDK to 21
       run: |
-        sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 21/g' android/app/build.gradle
-        sed -i 's/minSdkVersion 16/minSdkVersion 21/g' android/app/build.gradle
-        sed -i 's/minSdkVersion 19/minSdkVersion 21/g' android/app/build.gradle
+        sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 21/g' android/app/build.gradle || true
+        sed -i 's/minSdkVersion 16/minSdkVersion 21/g' android/app/build.gradle || true
+        sed -i 's/minSdkVersion 19/minSdkVersion 21/g' android/app/build.gradle || true
+        sed -i 's/minSdkVersion = flutter.minSdkVersion/minSdkVersion = 21/g' android/app/build.gradle.kts || true
+        sed -i 's/minSdkVersion = 16/minSdkVersion = 21/g' android/app/build.gradle.kts || true
+        sed -i 's/minSdkVersion = 19/minSdkVersion = 21/g' android/app/build.gradle.kts || true
 
     - name: Build Premium APK
       run: flutter build apk --release
