@@ -16,6 +16,7 @@ jobs:
     - name: Set up Flutter
       uses: subosito/flutter-action@v2
       with:
+        flutter-version: '3.19.6'
         channel: 'stable'
 
     - name: Install dependencies
@@ -29,9 +30,6 @@ jobs:
         sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 21/g' android/app/build.gradle || true
         sed -i 's/minSdkVersion 16/minSdkVersion 21/g' android/app/build.gradle || true
         sed -i 's/minSdkVersion 19/minSdkVersion 21/g' android/app/build.gradle || true
-        sed -i 's/minSdkVersion = flutter.minSdkVersion/minSdkVersion = 21/g' android/app/build.gradle.kts || true
-        sed -i 's/minSdkVersion = 16/minSdkVersion = 21/g' android/app/build.gradle.kts || true
-        sed -i 's/minSdkVersion = 19/minSdkVersion = 21/g' android/app/build.gradle.kts || true
 
     - name: Build Premium APK
       run: flutter build apk --release
@@ -41,4 +39,3 @@ jobs:
       with:
         name: AWI-Premium-App
         path: build/app/outputs/flutter-apk/app-release.apk
-        
