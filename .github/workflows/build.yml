@@ -1,4 +1,4 @@
-name: Build AWI Premium APK
+name: Build AWI Latest APK
 
 on:
   push:
@@ -16,14 +16,7 @@ jobs:
     - name: Set up Flutter
       uses: subosito/flutter-action@v2
       with:
-        flutter-version: '3.19.6'
         channel: 'stable'
-
-    - name: Fix Exact Package Versions
-      run: |
-        sed -i 's/perfect_volume_control:.*/perfect_volume_control: ^1.0.5/g' pubspec.yaml
-        sed -i 's/screen_brightness:.*/screen_brightness: ^1.0.0/g' pubspec.yaml
-        sed -i 's/chewie:.*/chewie: 1.7.5/g' pubspec.yaml
 
     - name: Generate Missing Android Folder (V2 Embedding)
       run: flutter create --project-name awi_stream_app --platforms android .
@@ -31,18 +24,18 @@ jobs:
     - name: Install dependencies
       run: flutter pub get
 
-    - name: Upgrade Android SDK to 21
+    - name: Set Minimum Android SDK
       run: |
         sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 21/g' android/app/build.gradle || true
         sed -i 's/minSdkVersion 16/minSdkVersion 21/g' android/app/build.gradle || true
         sed -i 's/minSdkVersion 19/minSdkVersion 21/g' android/app/build.gradle || true
 
-    - name: Build Premium APK
+    - name: Build Latest APK
       run: flutter build apk --release
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
-        name: AWI-Premium-App
+        name: AWI-Latest-App
         path: build/app/outputs/flutter-apk/app-release.apk
         
