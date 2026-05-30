@@ -1,28 +1,26 @@
 name: awi_stream_app
-description: Crunchyroll clone for AWI.TO
-publish_to: "none"
+description: A premium anime streaming app by AWI.
+publish_to: 'none'
+
 version: 1.0.0+1
+
 environment:
-  sdk: ">=3.0.0 <4.0.0"
+  sdk: '>=3.2.0 <4.0.0'
 
 dependencies:
   flutter:
     sdk: flutter
-  cupertino_icons: ^1.0.2
-  http: ^1.1.0
-  cached_network_image: ^3.3.0
-  webview_flutter: ^4.4.2
-  firebase_core: ^2.24.2
-  cloud_firestore: ^4.14.0
-  video_player: ^2.8.2
-  chewie: ^1.7.5
-  perfect_volume_control: any
-  screen_brightness: any
+  cupertino_icons: ^1.0.8
+  firebase_core: any
+  cloud_firestore: any
+  video_player: any
+  chewie: any
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^2.0.0
+  flutter_lints: ^4.0.0
 
 flutter:
   uses-material-design: true
+  
