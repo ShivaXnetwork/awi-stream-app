@@ -1,8 +1,8 @@
-name: Build Flutter APK
+name: Build AWI Premium APK
 
 on:
   push:
-    branches: [ "main", "master" ]
+    branches: [ "main" ]
   workflow_dispatch:
 
 jobs:
@@ -10,30 +10,32 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
-
-    - name: Set up Java
-      uses: actions/setup-java@v4
-      with:
-        distribution: 'temurin'
-        java-version: '17'
+    - name: Checkout Code
+      uses: actions/checkout@v3
 
     - name: Set up Flutter
       uses: subosito/flutter-action@v2
       with:
         channel: 'stable'
 
-    - name: Generate Platform Folders (Magic Hack)
-      run: flutter create --project-name awi_stream_app --platforms android .
-
-    - name: Install Dependencies
+    - name: Install dependencies
       run: flutter pub get
 
-    - name: Build APK
+    - name: Generate Missing Android Folder
+      run: flutter create .
+
+    - name: Upgrade Android SDK to 21
+      run: |
+        sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 21/g' android/app/build.gradle
+        sed -i 's/minSdkVersion 16/minSdkVersion 21/g' android/app/build.gradle
+        sed -i 's/minSdkVersion 19/minSdkVersion 21/g' android/app/build.gradle
+
+    - name: Build Premium APK
       run: flutter build apk --release
 
     - name: Upload APK
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v3
       with:
-        name: AwiStream-APK
+        name: AWI-Premium-App
         path: build/app/outputs/flutter-apk/app-release.apk
+        
