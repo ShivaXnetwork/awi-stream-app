@@ -19,11 +19,11 @@ jobs:
         flutter-version: '3.19.6'
         channel: 'stable'
 
+    - name: Generate Missing Android Folder (V2 Embedding)
+      run: flutter create --platforms android .
+
     - name: Install dependencies
       run: flutter pub get
-
-    - name: Generate Missing Android Folder
-      run: flutter create --platforms android .
 
     - name: Upgrade Android SDK to 21
       run: |
@@ -39,3 +39,4 @@ jobs:
       with:
         name: AWI-Premium-App
         path: build/app/outputs/flutter-apk/app-release.apk
+        
