@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:webview_flutter/webview_flutter.dart';
 import 'package:video_player/video_player.dart';
 import 'package:chewie/chewie.dart';
 import 'dart:ui';
-import 'dart:convert'; 
-import 'package:http/http.dart' as http; 
+import 'package:flutter/services.dart';
+import 'package:perfect_volume_control/perfect_volume_control.dart';
+import 'package:screen_brightness/screen_brightness.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -176,11 +176,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     String title = animeData['name'] ?? 'Unknown Anime';
                     String animeId = animes[index].id;
                     String posterUrl = animeData['poster'] ?? 'https://via.placeholder.com/300x400.png?text=No+Image';
-                    
-                    String apiId = animeData['apiId'] ?? animeId; 
 
                     return GestureDetector(
-                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => AnimeDetailsScreen(animeId: animeId, apiId: apiId, title: title, posterUrl: posterUrl))),
+                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => AnimeDetailsScreen(animeId: animeId, title: title, posterUrl: posterUrl))),
                       child: Container(
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(16),
@@ -261,88 +259,47 @@ class AccountScreen extends StatelessWidget {
 
 class AnimeDetailsScreen extends StatefulWidget {
   final String animeId;
-  final String apiId; 
   final String title;
   final String posterUrl;
 
-  const AnimeDetailsScreen({super.key, required this.animeId, required this.apiId, required this.title, required this.posterUrl});
+  const AnimeDetailsScreen({super.key, required this.animeId, required this.title, required this.posterUrl});
 
   @override
   State<AnimeDetailsScreen> createState() => _AnimeDetailsScreenState();
 }
 
 class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
-  List<dynamic> apiEpisodes = [];
-  bool isApiLoading = false;
 
-  // 🔥 ZORO / HiAnime API FETCH FUNCTION
-  Future<void> fetchEpisodesFromAPI() async {
-    setState(() { isApiLoading = true; });
+  Future<void> _playEpisode(BuildContext context, String msgId, String epTitle) async {
+    if (msgId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Link not found in database!")));
+      return;
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator(color: Color(0xFFF47521))),
+    );
+
     try {
-      // API call ab Gogoanime ki jagah ZORO par jayegi
-      final response = await http.get(Uri.parse('https://api.consumet.org/anime/zoro/info/${widget.apiId}'));
-      if (response.statusCode == 200) {
-        var data = json.decode(response.body);
-        setState(() {
-          apiEpisodes = data['episodes'] ?? []; 
-        });
+      DocumentSnapshot serverDoc = await FirebaseFirestore.instance.collection('settings').doc('server').get();
+      Navigator.pop(context); 
+
+      if (serverDoc.exists) {
+        String activeUrl = serverDoc.get('active_url') ?? "";
+        String finalStreamLink = "$activeUrl/stream/$msgId";
+        
+        Navigator.push(context, MaterialPageRoute(
+          builder: (context) => VideoPlayerScreen(videoUrl: finalStreamLink, title: epTitle)
+        ));
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Stream Server is Offline!")));
       }
     } catch (e) {
-      print("API Fetch Error: $e");
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Connection Error: $e")));
     }
-    setState(() { isApiLoading = false; });
-  }
-
-  void _showServerSelection(BuildContext context, String epTitle, String apiEpisodeId, String fallbackLink) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return Container(
-          decoration: const BoxDecoration(color: Color(0xFF13131F), borderRadius: BorderRadius.vertical(top: Radius.circular(25))),
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text("Select Server", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
-              const SizedBox(height: 8),
-              Text(epTitle, style: const TextStyle(color: Colors.white54, fontSize: 14)),
-              const SizedBox(height: 20),
-              
-              if (apiEpisodeId.isNotEmpty)
-                ListTile(
-                  leading: Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: const Color(0xFFF47521).withOpacity(0.2), borderRadius: BorderRadius.circular(8)), child: const Icon(Icons.flash_on, color: Color(0xFFF47521))),
-                  title: const Text("HiAnime Server (Sub/Dub)", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-                  subtitle: const Text("Premium Ad-Free Streaming", style: TextStyle(color: Colors.white54, fontSize: 12)),
-                  tileColor: const Color(0xFF1A1A24),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  onTap: () {
-                    Navigator.pop(context);
-                    // Watch URL ab ZORO API ko call karega
-                    String watchUrl = "https://api.consumet.org/anime/zoro/watch?episodeId=$apiEpisodeId";
-                    Navigator.push(context, MaterialPageRoute(builder: (context) => VideoPlayerScreen(videoUrl: watchUrl, title: epTitle)));
-                  },
-                ),
-              const SizedBox(height: 12),
-              
-              if (fallbackLink.isNotEmpty)
-                ListTile(
-                  leading: Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: Colors.blueAccent.withOpacity(0.2), borderRadius: BorderRadius.circular(8)), child: const Icon(Icons.web, color: Colors.blueAccent)),
-                  title: const Text("Web Player (Backup)", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-                  subtitle: const Text("Use if Premium fails", style: TextStyle(color: Colors.white54, fontSize: 12)),
-                  tileColor: const Color(0xFF1A1A24),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.push(context, MaterialPageRoute(builder: (context) => VideoPlayerScreen(videoUrl: fallbackLink, title: epTitle)));
-                  },
-                ),
-            ],
-          ),
-        );
-      },
-    );
   }
 
   @override
@@ -362,9 +319,9 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
                 children: [
                   Image.network(widget.posterUrl, fit: BoxFit.cover, alignment: Alignment.topCenter),
                   Container(
-                    decoration: BoxDecoration(
+                    decoration: const BoxDecoration(
                       gradient: LinearGradient(
-                        colors: [Colors.transparent, const Color(0xFF07070F)],
+                        colors: [Colors.transparent, Color(0xFF07070F)],
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                       ),
@@ -379,96 +336,70 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  ElevatedButton.icon(
-                    onPressed: isApiLoading ? null : fetchEpisodesFromAPI,
-                    icon: isApiLoading ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : const Icon(Icons.cloud_download),
-                    label: Text(isApiLoading ? "Connecting to HiAnime..." : "Fetch Episodes (HiAnime)"),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFF47521),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  const Text("Episodes", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
-                  const SizedBox(height: 10),
+                children: const [
+                  SizedBox(height: 10),
+                  Text("Episodes", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
+                  SizedBox(height: 10),
                 ],
               ),
             ),
           ),
-          if (apiEpisodes.isNotEmpty)
-            SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  var epData = apiEpisodes[index];
-                  String epTitle = epData['title'] ?? 'Episode ${epData['number']}';
-                  String apiEpisodeId = epData['id']; 
-                  
-                  return _buildEpisodeTile(context, "Season 1 • Ep ${epData['number']}", epTitle, apiEpisodeId, "");
-                },
-                childCount: apiEpisodes.length,
-              ),
-            )
-          else
-            StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance.collection('episodes').where('animeId', isEqualTo: widget.animeId).snapshots(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) return const SliverToBoxAdapter(child: Center(child: CircularProgressIndicator(color: Color(0xFFF47521))));
-                var rawEpisodes = snapshot.data?.docs ?? [];
-                if (rawEpisodes.isEmpty) return const SliverToBoxAdapter(child: Center(child: Text("Click Fetch button to get from HiAnime!", style: TextStyle(color: Colors.white54))));
+          StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance.collection('episodes').where('animeId', isEqualTo: widget.animeId).snapshots(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) return const SliverToBoxAdapter(child: Center(child: CircularProgressIndicator(color: Color(0xFFF47521))));
+              
+              var rawEpisodes = snapshot.data?.docs ?? [];
+              if (rawEpisodes.isEmpty) return const SliverToBoxAdapter(child: Center(child: Text("No episodes uploaded yet!", style: TextStyle(color: Colors.white54))));
 
-                rawEpisodes.sort((a, b) => ((a.data() as Map<String, dynamic>)['num'] ?? 0).compareTo((b.data() as Map<String, dynamic>)['num'] ?? 0));
+              rawEpisodes.sort((a, b) => ((a.data() as Map<String, dynamic>)['num'] ?? 0).compareTo((b.data() as Map<String, dynamic>)['num'] ?? 0));
 
-                return SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                      var epData = rawEpisodes[index].data() as Map<String, dynamic>;
-                      int epNum = epData['num'] ?? (index + 1);
-                      String actualTitle = epData['title'] ?? 'Episode $epNum';
-                      
-                      String server2Web = "";
-                      if (epData['links'] != null && epData['links']['1080p'] != null) {
-                        server2Web = epData['links']['1080p']['player'] ?? "";
-                      }
+              return SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    var epData = rawEpisodes[index].data() as Map<String, dynamic>;
+                    int epNum = epData['num'] ?? (index + 1);
+                    String actualTitle = epData['title'] ?? 'Episode $epNum';
+                    
+                    String msgId = "";
+                    if (epData['links'] != null && epData['links']['1080p'] != null) {
+                      msgId = epData['links']['1080p']['player']?.toString() ?? "";
+                    }
 
-                      return _buildEpisodeTile(context, "Season 1 • Ep $epNum", actualTitle, "", server2Web);
-                    },
-                    childCount: rawEpisodes.length,
-                  ),
-                );
-              },
-            ),
+                    return Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                      decoration: BoxDecoration(color: const Color(0xFF13131F), borderRadius: BorderRadius.circular(15)),
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        leading: Container(
+                          width: 50, height: 50,
+                          decoration: BoxDecoration(color: const Color(0xFFF47521).withOpacity(0.1), shape: BoxShape.circle),
+                          child: const Icon(Icons.play_arrow_rounded, color: Color(0xFFF47521), size: 30),
+                        ),
+                        title: Text("Season 1 • Ep $epNum", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFFF47521))),
+                        subtitle: Padding(
+                          padding: const EdgeInsets.only(top: 4.0),
+                          child: Text(actualTitle, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
+                        ),
+                        onTap: () {
+                          _playEpisode(context, msgId, "Ep $epNum - $actualTitle");
+                        },
+                      ),
+                    );
+                  },
+                  childCount: rawEpisodes.length,
+                ),
+              );
+            },
+          ),
           const SliverToBoxAdapter(child: SizedBox(height: 100)), 
         ],
       ),
     );
   }
-
-  Widget _buildEpisodeTile(BuildContext context, String displayEpNumber, String actualTitle, String apiEpisodeId, String fallbackLink) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      decoration: BoxDecoration(color: const Color(0xFF13131F), borderRadius: BorderRadius.circular(15)),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        leading: Container(
-          width: 50, height: 50,
-          decoration: BoxDecoration(color: const Color(0xFFF47521).withOpacity(0.1), shape: BoxShape.circle),
-          child: const Icon(Icons.play_arrow_rounded, color: Color(0xFFF47521), size: 30),
-        ),
-        title: Text(displayEpNumber, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFFF47521))),
-        subtitle: Padding(
-          padding: const EdgeInsets.only(top: 4.0),
-          child: Text(actualTitle, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
-        ),
-        onTap: () {
-          _showServerSelection(context, "$displayEpNumber - $actualTitle", apiEpisodeId, fallbackLink);
-        },
-      ),
-    );
-  }
 }
 
+// 🔥 THE ULTIMATE PREMIUM VIDEO PLAYER (MX PLAYER STYLE)
 class VideoPlayerScreen extends StatefulWidget {
   final String videoUrl;
   final String title;
@@ -479,77 +410,54 @@ class VideoPlayerScreen extends StatefulWidget {
 }
 
 class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
-  late final WebViewController _webController;
-  bool _isWebLoading = true;
-
   VideoPlayerController? _videoPlayerController;
   ChewieController? _chewieController;
-  bool _isNativePlayer = false;
-  String _finalApiVideoLink = "";
+
+  double _currentVolume = 0.5;
+  double _currentBrightness = 0.5;
 
   @override
   void initState() {
     super.initState();
-    _setupPlayer();
+    
+    // Auto Landscape & Immersive Mode
+    SystemChrome.setPreferredOrientations([DeviceOrientation.landscapeRight, DeviceOrientation.landscapeLeft]);
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+
+    // Initial Volume and Brightness fetch karna
+    PerfectVolumeControl.getVolume().then((vol) => _currentVolume = vol);
+    ScreenBrightness().current.then((b) => _currentBrightness = b);
+    PerfectVolumeControl.hideUI = true; // System volume slider hide karne ke liye
+
+    _initNativePlayer();
   }
 
-  Future<void> _setupPlayer() async {
-    // 🔥 Zoro API link check karega
-    if (widget.videoUrl.contains("api.consumet.org/anime/zoro/watch")) {
-      setState(() { _isNativePlayer = true; });
-      try {
-        final response = await http.get(Uri.parse(widget.videoUrl));
-        var data = json.decode(response.body);
-        var sources = data['sources'] as List<dynamic>;
-        if (sources.isNotEmpty) {
-          _finalApiVideoLink = sources.last['url']; 
-          _initNativePlayer(_finalApiVideoLink);
-        }
-      } catch (e) {
-        print("Video URL Fetch failed");
-      }
-    } 
-    else if (!widget.videoUrl.contains("bysesukior.com") && !widget.videoUrl.contains("byse.sx") && !widget.videoUrl.contains("rareanimes")) {
-      setState(() { _isNativePlayer = true; });
-      _initNativePlayer(widget.videoUrl);
-    } else {
-      _initWebViewPlayer();
-    }
-  }
-
-  void _initNativePlayer(String url) async {
-    _videoPlayerController = VideoPlayerController.networkUrl(Uri.parse(url));
+  void _initNativePlayer() async {
+    _videoPlayerController = VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl));
     await _videoPlayerController!.initialize();
+    
     _chewieController = ChewieController(
       videoPlayerController: _videoPlayerController!,
-      autoPlay: true, aspectRatio: 16 / 9,
-      materialProgressColors: ChewieProgressColors(playedColor: const Color(0xFFF47521), handleColor: const Color(0xFFF47521)),
+      autoPlay: true, 
+      aspectRatio: _videoPlayerController!.value.aspectRatio,
+      allowedScreenSleep: false, // Screen hamesha ON rahegi
+      showControlsOnInitialize: false,
+      materialProgressColors: ChewieProgressColors(
+        playedColor: const Color(0xFFF47521), 
+        handleColor: const Color(0xFFF47521),
+        bufferedColor: Colors.white24,
+        backgroundColor: Colors.black54,
+      ),
     );
-    setState(() {});
-  }
-
-  void _initWebViewPlayer() {
-    String videoHost = Uri.parse(widget.videoUrl).host;
-    _webController = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(Colors.black)
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onPageStarted: (String url) { if (mounted) setState(() => _isWebLoading = true); },
-          onPageFinished: (String url) { if (mounted) setState(() => _isWebLoading = false); },
-          onNavigationRequest: (NavigationRequest request) {
-            if (!request.url.contains(videoHost) && !request.url.contains("google")) {
-              return NavigationDecision.prevent; 
-            }
-            return NavigationDecision.navigate;
-          },
-        ),
-      )
-      ..loadRequest(Uri.parse(widget.videoUrl));
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
+    // Back aane par wapas Portrait mode aur UI wapas
+    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+
     _videoPlayerController?.dispose();
     _chewieController?.dispose();
     super.dispose();
@@ -559,33 +467,38 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: Colors.black, elevation: 0,
-        title: Text(widget.title, style: const TextStyle(fontSize: 14, color: Colors.white54)),
-      ),
       body: SafeArea(
-        child: PopScope(
-          canPop: false,
-          onPopInvoked: (didPop) async {
-            if (didPop) return;
-            if (!_isNativePlayer && await _webController.canGoBack()) {
-              _webController.goBack();
-            } else {
-              if (context.mounted) Navigator.of(context).pop();
-            }
-          },
-          child: Center(
-            child: _isNativePlayer
-                ? (_chewieController != null && _chewieController!.videoPlayerController.value.isInitialized
-                    ? Chewie(controller: _chewieController!)
-                    : const CircularProgressIndicator(color: Color(0xFFF47521)))
-                : Stack(
-                    children: [
-                      WebViewWidget(controller: _webController),
-                      if (_isWebLoading) const Center(child: CircularProgressIndicator(color: Color(0xFFF47521))),
-                    ],
-                  ),
-          ),
+        top: false,
+        bottom: false,
+        child: Center(
+          child: (_chewieController != null && _chewieController!.videoPlayerController.value.isInitialized)
+              // 🔥 Swipe Gestures (HitTestBehavior se Chewie ke play/pause conflict nahi honge)
+              ? GestureDetector(
+                  behavior: HitTestBehavior.translucent,
+                  onVerticalDragUpdate: (details) async {
+                    double screenWidth = MediaQuery.of(context).size.width;
+                    double delta = -details.delta.dy / 200; // Swipe sensitivity
+
+                    if (details.globalPosition.dx < screenWidth / 2) {
+                      // Left Side Swipe = Brightness Control
+                      _currentBrightness = (_currentBrightness + delta).clamp(0.0, 1.0);
+                      await ScreenBrightness().setScreenBrightness(_currentBrightness);
+                    } else {
+                      // Right Side Swipe = Volume Control
+                      _currentVolume = (_currentVolume + delta).clamp(0.0, 1.0);
+                      PerfectVolumeControl.setVolume(_currentVolume);
+                    }
+                  },
+                  child: Chewie(controller: _chewieController!),
+                )
+              : Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: const [
+                    CircularProgressIndicator(color: Color(0xFFF47521)),
+                    SizedBox(height: 20),
+                    Text("CONNECTING TO AWI SERVER...", style: TextStyle(color: Color(0xFFF47521), fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 2)),
+                  ],
+                ),
         ),
       ),
     );
